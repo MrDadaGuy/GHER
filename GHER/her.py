@@ -12,7 +12,7 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun,
                                gmmTrain, gmmTrain_config, gmmEval, gmmEval_config):
     def _encode_sample(tv_data, idxes):
         """
-            从经验池中将idxes取出. 随后提取指定的key，连接指定key，组成矩阵
+            Extract the idxes from the experience pool. Then extract the specified key and connect the specified key to form the matrix.
         """
         for key in tv_data.keys():
             if gmmTrain_config.envname.startswith("Hand") and gmmTrain_config.envname != "HandReach":
@@ -23,11 +23,11 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun,
             # ag
             idx_ag = tv_data['ag'][idx]
             assert idx_ag.shape == (gmmTrain_config.T+1, gmmTrain_config.ag_len)
-            # step 表示每个元素在周期中所属的位置
+            # step Indicates where each element belongs in the cycle
             idx_step = (np.arange(0, gmmTrain_config.T+1) / float(gmmTrain_config.T)).reshape(gmmTrain_config.T+1, 1) 
             idx_g = tv_data['g'][idx][-1]    # original goal
 
-            # 从末尾从前数，成功的时间步占整个周期的比例
+            # From the end, the number of successful time steps in the entire cycle
             info_succ = tv_data['info_is_success'][idx, :, 0][::-1]
             info_succ_dic = [(k, list(v)) for k, v in itertools.groupby(info_succ)]
             idx_success_rate = 0. if info_succ_dic[0][0] == 0 else len(info_succ_dic[0][1]) / float(gmmTrain_config.T)
@@ -57,20 +57,20 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun,
             CALL_NUM += 1  
             epoch = int(CALL_NUM / 2000)
         
-        # 从 episode_batch 中抽取 batch_size_in_transitions 个样本
-        T = episode_batch['u'].shape[1]                        # 周期长度 T=50
-        rollout_batch_size = episode_batch['u'].shape[0]       # 经验池存储的周期个数
-        batch_size = batch_size_in_transitions                 # batch_size = 256 或 100.按transition计
+        # Extract batch_size_in_transitions samples from episode_batch
+        T = episode_batch['u'].shape[1]                        # Period length T=50
+        rollout_batch_size = episode_batch['u'].shape[0]       # The number of cycles stored in the experience pool
+        batch_size = batch_size_in_transitions                 # Batch_size = 256 or 100. by transition
     
         # :transitons为 o (256, 10)  u (256, 4)  g (256, 3)  info_is_success (256, 1) ag (256, 3) o_2 (256, 10) ag_2 (256, 3)
-        episode_idxs = np.random.randint(0, rollout_batch_size, batch_size)  # 选择 周期号
-        t_samples = np.random.randint(T, size=batch_size)   # 选择 周期中 的时间步序号
+        episode_idxs = np.random.randint(0, rollout_batch_size, batch_size)  # Select cycle number
+        t_samples = np.random.randint(T, size=batch_size)   # Select the time step number in the cycle
         transitions = {key: episode_batch[key][episode_idxs, t_samples].copy() for key in episode_batch.keys()}
 
         # GHER. ---------------------------------------------------------------------- 
-        # 对于三种不同种类样本, 分别选取不同类型的 achieved_goal 对原始 goal 进行替换
+        # For three different kinds of samples, select different types of achieved_goal to replace the original goal.
         
-        # 1. 根据batch_size_in_transition数目，决定使用GMM类的哪一种设置 
+        # 1. Determine which setting of the GMM class to use based on the number of batch_size_in_transitions 
         # print("****", batch_size_in_transitions)
         assert batch_size_in_transitions in [100, 256]
         gmmModel, gmmConfig = None, None
@@ -98,17 +98,17 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun,
         episode_idxs3 = episode_idxs[idxs3]
 
         # --------------------------------------------------------------------
-        # 分别对四种样本进行 achieved_goal 替换
-        # 1. 对第一种样本不进行操作. 仍保留原始的 goal    
-        # 2. 第2种样本，s_t 目标设置为 HER 中的原始方法 'future'
+        # respectively achieved the achieved_goal replacement for the four samples
+        # 1. No action on the first sample. The original goal is still retained.
+        # 2. The second sample, the s_t target is set to the original method in HER 'future'
         future_offset = np.random.uniform(size=batch_size) * (T - t_samples) 
         future_offset = future_offset.astype(int)
-        future_t = (t_samples + 1 + future_offset)[idxs2]          # 此处+2表示不产生立即奖励
+        future_t = (t_samples + 1 + future_offset)[idxs2]          # Here +2 means no immediate reward
         future_ag = episode_batch['ag'][episode_idxs2, future_t]
-        transitions['g'][idxs2] = future_ag    # 以future_p的概率将抽样的样本的原始goal替换为ag
+        transitions['g'][idxs2] = future_ag    # Replace the original goal of the sampled sample with the probability of future_p with ag
         
         # 4. sample from RNN model 
-        batch_np = _encode_sample(episode_batch, episode_idxs3)   # 构造对应周期的测试样本 (r3, 51, 9)
+        batch_np = _encode_sample(episode_batch, episode_idxs3)   # Construct a test sample of the corresponding period (r3, 51, 9)
         assert batch_np.shape == (r3_n, gmmConfig.T+1, gmmConfig.input_size)
         start_point = batch_np[np.arange(0, r3_n), (t_samples[idxs3]/2).astype(np.int), :]
 
@@ -117,7 +117,7 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun,
         start_point_list = []
         for i in np.arange(1, warm_num+1)[::-1]:
             t_samples_temp = (t_samples[idxs3]/2).astype(np.int) - i
-            t_samples_temp[t_samples_temp < 0] = 0       # 边界处理
+            t_samples_temp[t_samples_temp < 0] = 0       # Boundary processing
             start_point_temp = batch_np[np.arange(0, r3_n), t_samples_temp, :]
             assert start_point_temp.shape == (r3_n, gmmConfig.input_size)
             start_point_list.append(start_point_temp)
@@ -158,16 +158,16 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun,
             sys.exit()
 
         # sample
-        gmm_sample = gmmModel.sample_gmm(start_point_warmall, num_steps=num_steps, inc_level=True)   # 采样
+        gmm_sample = gmmModel.sample_gmm(start_point_warmall, num_steps=num_steps, inc_level=True)   # sampling
         assert gmm_sample.shape == (r3_n, num_steps, gmmConfig.ag_len)
-        gmm_goal = gmm_sample[:, -1, :]      # 使用采样生成样本的最后一个时间步结果作为goal
+        gmm_goal = gmm_sample[:, -1, :]      # Use the last time step result of the sample generation sample as the goal
         transitions['g'][idxs3] = gmm_goal
 
         # Reconstruct info dictionary for reward computation.
         info = {}
         for key, value in transitions.items():
             if key.startswith('info_'):             
-                info[key.replace('info_', '')] = value   # info的键为"is_success"
+                info[key.replace('info_', '')] = value   # The info key is "is_success"
 
         # Re-compute reward since we may have substituted the goal.
         reward_params = {k: transitions[k] for k in ['ag_2', 'g']}

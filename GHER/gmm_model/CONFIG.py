@@ -104,7 +104,7 @@ class rnn_meanStd_Config(rnn_sample_Config):
         super(rnn_meanStd_Config, self).__init__(all_batch)
 
 
-# 用于 her_sample.py 中进行测试
+# Used for testing in her_sample.py
 class rnn_test_Config(rnn_sample_Config):
     def __init__(self):
         super(rnn_test_Config, self).__init__()

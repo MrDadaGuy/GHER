@@ -18,20 +18,20 @@ class RolloutWorker:
         Args:
             make_env (function): a factory function that creates a new instance of the environment
                 when called  
-            policy (object): DDPG的对象
-            dims (dict of ints): 维度. 例：{'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+            policy (object): DDPG object
+            dims (dict of ints): Dimensions. Example:{'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
             logger (object): the logger that is used by the rollout worker
-            rollout_batch_size (int): the number of parallel rollouts that should be used. 一般设为2
+            rollout_batch_size (int): the number of parallel rollouts that should be used. Generally set to 2
             
             exploit (boolean): whether or not to exploit, i.e. to act optimally according to the
-                current policy without any exploration 控制是否进行探索
+                current policy without any exploration Control whether to explore
 
-            use_target_net (boolean): 控制在执行动作时使用的是 self.main 网络还是 self.target 网络
-            compute_Q (boolean): 控制是否在计算输出的动作时计算Q值
-            noise_eps (float): scale of the additive Gaussian noise  在动作基础上添加的高斯噪声参数，设为0.2
-            random_eps (float): probability of selecting a completely random action 探索因子，设为0.3
-            history_len (int): length of history for statistics smoothing 用于平滑时使用的历史长度，设置为100
-            render (boolean): whether or not to render the rollouts  是否显示
+            use_target_net (boolean): Controls whether the self.main network or the self.target network is used when performing actions
+            compute_Q (boolean): Control whether to calculate the Q value when calculating the action of the output
+            noise_eps (float): scale of the additive Gaussian noise  The Gaussian noise parameter added on the basis of the action is set to 0.2.
+            random_eps (float): probability of selecting a completely random action Exploratory factor, set to 0.3
+            history_len (int): length of history for statistics smoothing The historical length used for smoothing, set to 100
+            render (boolean): whether or not to render the rollouts  Whether to display
         """
 
         self.envs = [make_env() for _ in range(rollout_batch_size)]
@@ -39,7 +39,7 @@ class RolloutWorker:
 
         self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]
 
-        # 用于记录
+        # For recording
         self.success_history = deque(maxlen=history_len)
         self.Q_history = deque(maxlen=history_len)
 
@@ -55,7 +55,7 @@ class RolloutWorker:
         """
             Resets the `i`-th rollout environment, re-samples a new goal, and updates the `initial_o`
         and `g` arrays accordingly.
-            i 代表并行的 worker 的序号. 周期开始时需进行此操作
+            i represents the serial number of the parallel worker. This is required at the beginning of the cycle.
         """
         obs = self.envs[i].reset()
         self.initial_o[i] = obs['observation']
@@ -64,7 +64,7 @@ class RolloutWorker:
 
     def reset_all_rollouts(self):
         """Resets all `rollout_batch_size` rollout workers.
-            连续调用 reset_rollout 函数，重设所有 worker
+            Repeatedly call the reset_rollout function to reset all workers
         """
         for i in range(self.rollout_batch_size):
             self.reset_rollout(i)
@@ -73,7 +73,7 @@ class RolloutWorker:
         """
             Performs `rollout_batch_size` rollouts in parallel for time horizon `T` with the current
             policy acting on it accordingly.
-            rollout_batch_size = 2，表示有两个并行的 worker 进行采样
+            rollout_batch_size = 2, indicating that there are two parallel workers to sample
         """
         self.reset_all_rollouts()
 
@@ -87,18 +87,18 @@ class RolloutWorker:
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
         info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in self.info_keys]
         Qs = []
-        # self.T=50,循环产生一个周期的样本
+        # self.T=50, the loop produces a sample of a cycle
         for t in range(self.T):
-            # self.policy执行可以获得执行的动作 u 和 动作对应的Q值
-            policy_output = self.policy.get_actions(                      # 该函数定义在DDPG类中
+            # Self.policy executes the action that can get the action u and the Q value corresponding to the action
+            policy_output = self.policy.get_actions(                      # This function is defined in the DDPG class.
                 o, ag, self.g,
                 compute_Q=self.compute_Q,
-                # 如果 self.exploit 为False,则会使用噪声
-                noise_eps=self.noise_eps if not self.exploit else 0.,     # 是否添加
-                random_eps=self.random_eps if not self.exploit else 0.,   # 是否 epsilon-greedy
-                use_target_net=self.use_target_net)   # use_target_net 一般为 False
+                # If self.exploit is False, noise will be used
+                noise_eps=self.noise_eps if not self.exploit else 0.,     # Whether to add
+                random_eps=self.random_eps if not self.exploit else 0.,   # whether epsilon-greedy
+                use_target_net=self.use_target_net)   # use_target_net Generally False
 
-            # 提取动作和Q值. 当 rollout_batch_size=1 时，u 和 Q 存储了2个 worker 的动作和值函数
+            # Extract actions and Q values. When rollout_batch_size=1, u and Q store 2 worker action and value functions
             if self.compute_Q:
                 u, Q = policy_output
                 Qs.append(Q)
@@ -108,19 +108,19 @@ class RolloutWorker:
                 # The non-batched case should still have a reasonable shape.
                 u = u.reshape(1, -1)
 
-            # 根据选择的动作 u，执行该动作，获得新的状态 o 和 ag
+            # According to the selected action u, execute the action to get the new state o and ag
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
-            # 对每个worker分别执行动作，得到下一步的 obs 和 ag
+            # Perform actions on each worker to get the next obs and ag
             for i in range(self.rollout_batch_size):
                 try:
                     # We fully ignore the reward here because it will have to be re-computed for HER.
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
                     if 'is_success' in info:
                         success[i] = info['is_success']
-                    o_new[i] = curr_o_new['observation']       # 提取 o
-                    ag_new[i] = curr_o_new['achieved_goal']    # 提取 ag
+                    o_new[i] = curr_o_new['observation']       # extract o
+                    ag_new[i] = curr_o_new['achieved_goal']    # extract ag
                     for idx, key in enumerate(self.info_keys):
                         info_values[idx][t, i] = info[key]
                     if self.render:
@@ -135,24 +135,24 @@ class RolloutWorker:
                 self.reset_all_rollouts()
                 return self.generate_rollouts()
 
-            # 记录 obs 和 ag
+            # Record obs and ag
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
             successes.append(success.copy())
-            acts.append(u.copy())             # 动作序列
-            goals.append(self.g.copy())       # g 保持不变
+            acts.append(u.copy())             # Sequence of actions
+            goals.append(self.g.copy())       # g constant
 
-            # 更新，进行下一步动作选取
+            # Update, proceed to the next action selection
             o[...] = o_new
             ag[...] = ag_new
         
 
-        # obs 和 ag 均在添加1维. 因此执行结束后，obs和ag的第一维长度为 self.T+1=51
+        # Both obs and ag are adding 1 dimension. So after the execution ends, the first dimension of obs and ag is self.T+1=51
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
-        self.initial_o[:] = o                # 准备进行下一次
+        self.initial_o[:] = o                # Ready to proceed next time
 
-        # obs规模为：(51, 2, 10)   acts为(50, 2, 4)   goals为(50, 2, 3)   achieved_goals为(51, 2, 3)
+        # obs Scale is: (51, 2, 10)   acts for (50, 2, 4)   goals for (50, 2, 3)   achieved_goals for (51, 2, 3)
         episode = dict(o=obs,
                        u=acts,
                        g=goals,
@@ -161,16 +161,16 @@ class RolloutWorker:
             # print("key =", key, "value =", value)
             episode['info_{}'.format(key)] = value
 
-        # stats  只保留 successes 最后一个元素，即只记录了周期末尾是否成功
-        # successes.shape=(50,2)(worker数目为2),  successful.shape=(2,)
+        # Stats only keeps the last element of successes, that is, only the success of the end of the cycle is recorded.
+        # successes.shape=(50,2)(worker the number is 2),  successful.shape=(2,)
         successful = np.array(successes)[-1, :]                
         assert successful.shape == (self.rollout_batch_size,)  # (2,)
         
-        # 成功率. 在 T=50 步内达到目标的成功率. 在 worker 之间取平均
+        # Success rate. The success rate of reaching the goal in T=50 steps. Average between workers
         success_rate = np.mean(successful)
-        self.success_history.append(success_rate)  # 记录成功率
+        self.success_history.append(success_rate)  # Record success rate
         if self.compute_Q:
-            self.Q_history.append(np.mean(Qs))     # 记录Q的均值
+            self.Q_history.append(np.mean(Qs))     # Record the mean of Q
         self.n_episodes += self.rollout_batch_size
 
         return convert_episode_to_batch_major(episode)
@@ -191,7 +191,7 @@ class RolloutWorker:
         """Pickles the current policy for later inspection.
         """
         with open(path, 'wb') as f:
-            pickle.dump(self.policy, f)         # 将 self.policy 参数 dump 在本地
+            pickle.dump(self.policy, f)         # Dump the self.policy parameter locally
 
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.

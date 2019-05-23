@@ -53,11 +53,11 @@ class GMMInput:
             self.train_data[key] = self.data[key][:int(self.storage*(4/5.)), :, :]
             self.valid_data[key] = self.data[key][int(self.storage*(4/5.)):, :, :]
         self.train_storage, self.valid_storage = self.train_data['g'].shape[0], self.valid_data['g'].shape[0]
-        print("训练集样本数: {}, 验证集样本数: {}".format(self.train_storage, self.valid_storage))
+        print("Number of training set samples: {}, number of validation set samples: {}".format(self.train_storage, self.valid_storage))
 
     def _shuffle_data(self):
         """
-            将 self.data 中数据的顺序打乱
+            The order of the data in self.data is upset
         """
         idx = np.random.permutation(self.storage)
         for key in self._keys:
@@ -76,27 +76,27 @@ class GMMInput:
             # ag
             idx_ag = tv_data['ag'][idx]
             assert idx_ag.shape == (self.T+1, self.config.ag_len)
-            # step 表示每个元素在周期中所属的位置
+            # step Indicates where each element belongs in the cycle
             idx_step = (np.arange(0, self.T+1) / float(self.T)).reshape(int(self.T)+1, 1) 
 
-            # 以下为序列中不变化的量
+            # The following is the amount that does not change in the sequence.
             # goal
             idx_g = tv_data['g'][idx][-1]    # (3,)
 
-            # 从末尾从前数，成功的时间步占整个周期的比例
+            # From the end, the number of successful time steps in the entire cycle
             info_succ = tv_data['info_is_success'][idx, :, 0][::-1]
             info_succ_dic = [(k, list(v)) for k, v in itertools.groupby(info_succ)]
             idx_success_rate = 0. if info_succ_dic[0][0] == 0 else len(info_succ_dic[0][1])/float(self.T)
             
-            # 周期结尾是否成功
+            # Whether the end of the cycle is successful
             idx_done = float(tv_data['info_is_success'][idx, -1, 0]) 
 
-            # 整个周期的平均位置与目标的距离 / 起点与目标的距离
-            mean_ag = np.mean(tv_data['ag'][idx, -5:, :], axis=0)        # 最后5个step的平均位置 (3,)
+            # Average position of the entire cycle from the target / distance from the starting point to the target
+            mean_ag = np.mean(tv_data['ag'][idx, -5:, :], axis=0)        # Average position of the last 5 steps (3,)
             start_ag = tv_data['ag'][idx, 0, :]                          # 起始位置 (3,)
-            idx_dis = np.linalg.norm(mean_ag-idx_g) / np.linalg.norm(start_ag-idx_g)  # 标量，相当于比例，越小越好
+            idx_dis = np.linalg.norm(mean_ag-idx_g) / np.linalg.norm(start_ag-idx_g)  # Scalar, equivalent to the ratio, the smaller the better
  
-            # 按照顺序 ag(x,y,z), g(x,y,z), step, success_rate, success_first 进行整理
+            # Follow a sequence ag(x,y,z), g(x,y,z), step, success_rate, success_first Organize
             train_idx = np.hstack([idx_ag,                                        # ag     (51, 3)
                                    np.tile(idx_g, (self.T+1, 1)),                 # g      (51, 3)
                                    idx_step,                                      # step   (51, 1)
@@ -107,12 +107,12 @@ class GMMInput:
             assert train_idx.shape == (self.T+1, self.config.input_size)
             batches.append(train_idx)
 
-        # 整合特征，处理成numpy
+        # Integrate features into numpy
         batches_np = np.stack(batches)
         # assert batches_np.shape == (self.batch_size_in_episode, 51, 10)   
         self.batches_np = batches_np
         X = batches_np[:, :self.T, :]   
-        Y = batches_np[:, 1:, :]         # 错位
+        Y = batches_np[:, 1:, :]         # dislocation
         # assert X.shape == Y.shape == (self.batch_size_in_episode, 50, 10)
 
         X_batch = []
@@ -132,8 +132,8 @@ class GMMInput:
 
     def create_batch(self, mode="train"):
         """
-            mode 控制从 self.train_data 或 self.valid_data 中进行采样
-            train 数据进行顺序采样, valid 随机采样
+            Mode control samples from self.train_data or self.valid_data
+             Train data for sequential sampling, valid random sampling
         """
         assert mode in ["train", "valid"]
 
@@ -165,9 +165,9 @@ def TRAIN(epoch_num):
         config_proto.gpu_options.per_process_gpu_memory_fraction = 0.7
         rnn_sess = tf.Session(config=config_proto)
         
-        # train, eval, sample 三个模型在不同设置下重用权重.
+        # train, eval, sample Three models reuse weights under different settings.
         with tf.name_scope("Train"):
-            with tf.variable_scope("Model") as scope:  # 训练
+            with tf.variable_scope("Model") as scope:  # training
                 rnn_m = GMMModel(rnn_sess, config_str="train")
 
         with tf.name_scope("Eval"):
@@ -183,19 +183,19 @@ def TRAIN(epoch_num):
     
     rnn_sess.run(tf.global_variables_initializer())
 
-    # 学习率
-    init_lr = train_config.init_lr                    # 初始学习率
-    decay = train_config.lr_decay                     # 学习率衰减
+    # Learning rate
+    init_lr = train_config.init_lr                    # Initial learning rate
+    decay = train_config.lr_decay                     # Learning rate attenuation
 
-    # 循环
+    # cycle
     min_loss = float("inf")
     train_losses, eval_losses = [], []
     for epoch in range(epoch_num):
-        # 学习率更新
+        # Learning rate update
         rnn_sess.run(tf.assign(rnn_m.lr, init_lr * (decay ** epoch)))        
         
-        # 提取一个批量数据，训练 train_steps 次
-        train_cost = rnn_m.train_epoch(gmmInput, epoch, train_steps=8)   # train_steps修改
+        # Extract a batch of data and train train_steps times
+        train_cost = rnn_m.train_epoch(gmmInput, epoch, train_steps=8)   # Train_steps modification
         train_losses.append(train_cost)
 
         # Eval
@@ -204,7 +204,7 @@ def TRAIN(epoch_num):
         print("EVAL loss:", eval_loss, "\n------------") 
         eval_losses.append(eval_loss)
 
-        # sample模型保存，用于产生样本
+        # Sample model saved for generating samples
         if epoch % 20 == 0:
             savename = "model-"+str(epoch)+"-({:.4})".format(eval_loss)+".ckpt"
             rnn_m.save_model(savename)

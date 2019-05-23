@@ -48,7 +48,7 @@ def import_function(spec):
 def flatten_grads(var_list, grads):
     """
         Flattens a variables and their gradients.
-        连接所有梯度成一个大的tensor,在第0维进行链接
+        Connect all gradients into a large tensor, link in the 0th dimension
     """
     return tf.concat([tf.reshape(grad, [U.numel(v)])
                       for (v, grad) in zip(var_list, grads)], 0)
@@ -57,8 +57,8 @@ def flatten_grads(var_list, grads):
 def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
     """
         Creates a simple neural network
-        创建一个全连接的神经网络，除了输出层之外激活函数均为relu
-        layer_size 是一个list，决定每层的神经元个数
+        Create a fully connected neural network, except the output layer, the activation function is relu
+        Layer_size is a list that determines the number of neurons per layer
     """
     for i, size in enumerate(layers_sizes):
         activation = tf.nn.relu if i < len(layers_sizes)-1 else None
@@ -77,7 +77,7 @@ def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
 
 def install_mpi_excepthook():
     """
-        ?? 多线程相关
+        ?? Multithreaded correlation
     """
     import sys
     from mpi4py import MPI
@@ -125,7 +125,7 @@ def mpi_fork(n):
 def convert_episode_to_batch_major(episode):
     """Converts an episode to have the batch dimension in the major (first)
     dimension.
-        该函数在 rollout.py 中 generate_rollout 的最后被调用
+        This function is called at the end of generate_rollout in rollout.py
 
     """
     episode_batch = {}
@@ -134,11 +134,11 @@ def convert_episode_to_batch_major(episode):
         # make inputs batch-major instead of time-major
         episode_batch[key] = val.swapaxes(0, 1)
 
-    # 转换前 episode 中每个 key 对应的变量的 shape 为
+    # The shape of the variable corresponding to each key in the episode before conversion is
     # o (51, 2, 10), u (50, 2, 4), g (50, 2, 3), ag (51, 2, 3) info_is_success (50, 2, 1)
-    # 其中 2 代表 worker 的个数，由参数 rollout_batch_size 决定
+    # Where 2 represents the number of workers, determined by the parameter rollout_batch_size
 
-    # 转换后为
+    # After conversion
     # o (2, 51, 10), u (2, 50, 4), g (2, 50, 3), ag (2, 51, 3) info_is_success (2, 50, 1)
 
     return episode_batch
@@ -157,12 +157,12 @@ def reshape_for_broadcasting(source, target):
     """
     dim = len(target.get_shape())
     shape = ([1] * (dim-1)) + [-1]
-    # print(shape)  # 当dim=3时，shape为[1,1,-1]
+    # Print(shape) # When dim=3, the shape is [1,1,-1]
     return tf.reshape(tf.cast(source, target.dtype), shape)
 
 
 if __name__ == '__main__':
-    # 测试 reshape_for_broadcasting
+    # test reshape_for_broadcasting
     a = tf.constant(np.zeros((3,4,5)))
     res = reshape_for_broadcasting([100, 100], a)
     sess = tf.Session()

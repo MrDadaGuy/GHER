@@ -29,7 +29,7 @@ def train(policy, rollout_worker, evaluator,
           save_policies, **kwargs):
     rank = MPI.COMM_WORLD.Get_rank()
 
-    # 保存网络参数的路径
+    # Path to save network parameters
     latest_policy_path = os.path.join(logger.get_dir(), 'policy_latest.pkl')
     best_policy_path = os.path.join(logger.get_dir(), 'policy_best.pkl')
     periodic_policy_path = os.path.join(logger.get_dir(), 'policy_{}.pkl')
@@ -43,12 +43,12 @@ def train(policy, rollout_worker, evaluator,
         rollout_worker.clear_history()
 
         for i in range(n_cycles):         # n_cycles=50
-            episode = rollout_worker.generate_rollouts()  # 产生1个周期的样本
-            # 调用DDPG的 store_episode 函数，进一步调用 replay_buffer 中的 store 函数
+            episode = rollout_worker.generate_rollouts()  # Generate 1 cycle sample
+            # transfer DDPG的 store_episode Function, further call replay_buffer middle store function
             policy.store_episode(episode, verbose=True)
             for j in range(n_batches):    # n_batches = 40
-                policy.train()            # 定义在DDPG.train中，进行一次更新
-            # 更新target-Q
+                policy.train()            # Defined in DDPG.train In, make an update
+            # Update target-Q
             policy.update_target_net()
 
         # test
@@ -69,7 +69,7 @@ def train(policy, rollout_worker, evaluator,
         if rank == 0:
             logger.dump_tabular()
 
-        # 保存策略时文件读写与 tensorboard 中的 tf.summary 相互冲突，不能同时运行
+        # File read and write when saving a policy tensorboard middle tf.summary Conflicting, not running at the same time
         success_rate = mpi_average(evaluator.current_success_rate())
         if rank == 0 and success_rate > best_success_rate and save_policies:
             best_success_rate = success_rate
@@ -109,23 +109,23 @@ def launch(env_name, logdir, n_epochs, num_cpu, seed, replay_strategy, policy_sa
         logger.configure()
     logdir = logger.get_dir()
     assert logdir is not None
-    os.makedirs(logdir, exist_ok=True)  # 创建目录用于记录日志
+    os.makedirs(logdir, exist_ok=True)  # Create a directory for logging
 
     # Seed everything.
     rank_seed = seed + 1000000 * rank
     set_global_seeds(rank_seed)
 
     # Prepare params.
-    params = config.DEFAULT_PARAMS   # 字典，默认参数定义在 config.py 中
-    params['env_name'] = env_name    # 添加参数 env_name
-    params['replay_strategy'] = replay_strategy  # 添加参数 replay_strategy="future"
+    params = config.DEFAULT_PARAMS   # Dictionary, default parameters are defined in config.py in
+    params['env_name'] = env_name    # add parameters env_name
+    params['replay_strategy'] = replay_strategy  # add parameters replay_strategy="future"
     if env_name in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env_name])  # merge env-specific parameters in
-    # 在本函数的输入中可以指定 override_params 来取代 params 中的特定参数
+    # Can be specified in the input of this function override_params to replace params specific parameters
     params.update(**override_params)  # makes it possible to override any parameter
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
-        json.dump(params, f)                # 将当前的所有参数设置写入文件
-    # 该函数在 config.py 中，新增了 ddpg_params 键，将原有键更名为 "_"+键名
+        json.dump(params, f)                # Write all current parameter settings to the file
+    # This function is config.py In, added ddpg_params Key, rename the original key to "_" + key name
     params = config.prepare_params(params)
     config.log_params(params, logger=logger)
 
@@ -141,23 +141,23 @@ def launch(env_name, logdir, n_epochs, num_cpu, seed, replay_strategy, policy_sa
         logger.warn('****************')
         logger.warn()
 
-    # 执行后返回维度 dims = {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
+    # Return dimension after execution dims = {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}
     dims = config.configure_dims(params)
 
-    # 执行后返回 DDPG 类的实例化对象
+    # Return after execution DDPG Instantiated object of class
     policy = config.configure_ddpg(dims=dims, params=params, clip_return=clip_return)
 
-    # 以下参数用于控制在训练和测试中动作的选择
+    # The following parameters are used to control the selection of actions in training and testing.
     rollout_params = {
         'exploit': False,
-        'use_target_net': False,  # 控制动作选择时使用的是 main 网络还是 target 网络
+        'use_target_net': False,  # Control action selection is used main Network or target The internet
         'use_demo_states': True,
         'compute_Q': False,
         'T': params['T'],
     }
     eval_params = {
         'exploit': True,
-        'use_target_net': params['test_with_polyak'],  # 一般为False
+        'use_target_net': params['test_with_polyak'],  # Generally False
         'use_demo_states': False,
         'compute_Q': True,
         'T': params['T'],
@@ -166,12 +166,12 @@ def launch(env_name, logdir, n_epochs, num_cpu, seed, replay_strategy, policy_sa
         rollout_params[name] = params[name]
         eval_params[name] = params[name]
 
-    # RolloutWorker 定义在 rollout.py 中
-    # rollout_worker 的参数设置为：
+    # RolloutWorker Defined in rollout.py in
+    # rollout_worker The parameters are set to:
     # { 'rollout_batch_size': 2, 'exploit': False, 'use_target_net': False, 
     #   'compute_Q': False, 'noise_eps': 0.2, 'random_eps': 0.3, 'history_len': 100, 
-    #   'render': False, 'make_env': 函数, 'policy': DDPG类的对象, 'dims': {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}, 
-    #   'logger': 类, 'use_demo_states': True, 'T': 50, 'gamma': 0.98, 'envs': [<TimeLimit<FetchReachEnv<FetchReach-v1>>>, 
+    #   'render': False, 'make_env': function, 'policy': DDPG Class object, 'dims': {'o': 10, 'u': 4, 'g': 3, 'info_is_success': 1}, 
+    #   'logger': class, 'use_demo_states': True, 'T': 50, 'gamma': 0.98, 'envs': [<TimeLimit<FetchReachEnv<FetchReach-v1>>>, 
     # 'info_keys': ['is_success'], 'success_history': deque([], maxlen=100), 'Q_history': deque([], maxlen=100), 'n_episodes': 0, 
     # 'g': array([[1.4879797 , 0.6269019 , 0.46735048], [1.3925381 , 0.8017641 , 0.49162573]], dtype=float32), 
     # 'initial_o': array([[ 1.3418437e+00,  7.4910051e-01,  5.3471720e-01,  1.8902746e-04, 7.7719116e-05,  3.4374943e-06, -1.2610036e-08, -9.0467189e-08, 4.5538709e-06, -2.1328783e-06],[ 1.3418437e+00,  7.4910051e-01,  5.3471720e-01,  1.8902746e-04, 7.7719116e-05,  3.4374943e-06, -1.2610036e-08, -9.0467189e-08, 4.5538709e-06, -2.1328783e-06]], dtype=float32), 
@@ -183,11 +183,11 @@ def launch(env_name, logdir, n_epochs, num_cpu, seed, replay_strategy, policy_sa
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
     evaluator.seed(rank_seed)
     
-    # 训练
+    # training
     train(
-        logdir=logdir, policy=policy,                                  # policy为DDPG类的对象
-        rollout_worker=rollout_worker, evaluator=evaluator,            # rollout_worker和evaluator在 rollout.py 中定义 
-        n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],  # n_epochs 为总训练周期数, n_test_rollouts=10
+        logdir=logdir, policy=policy,                                  # Policy is an object of the DDPG class
+        rollout_worker=rollout_worker, evaluator=evaluator,            # Rollout_worker and evaluator are defined in rollout.py 
+        n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],  # N_epochs is the total number of training cycles, n_test_rollouts=10
         n_cycles=params['n_cycles'], n_batches=params['n_batches'],    # n_cycles=10, n_batches=40
         policy_save_interval=policy_save_interval, save_policies=save_policies)  # policy_save_interval=5, save_polices=True
 

@@ -30,9 +30,9 @@ def init_GMMModel():
         # config_proto.gpu_options.per_process_gpu_memory_fraction = 0.45
         gmm_sess = tf.Session(config=config_proto)
         
-        # train, eval, sample 三个模型在不同设置下重用权重.
+        # train, eval, sample Three models reuse weights under different settings.
         with tf.name_scope("Train"):
-            with tf.variable_scope("Model") as scope:  # 训练
+            with tf.variable_scope("Model") as scope:  # training
                 gmmTrain = GMMModel(gmm_sess, config_str="train")
 
         with tf.name_scope("Eval"):
@@ -52,7 +52,7 @@ def init_GMMModel():
     gmmTrain.reload_model()
     print("Load done.\n\n")
 
-    # 返回两个模型和两个config
+    # Return two models and two config
     return gmmSample, gmmmeanStd, gmmSample_config, gmmmeanStd_config, gmmTrain, gmmTrain_config, gmmEval, gmmEval_config
 
 
@@ -78,7 +78,7 @@ DEFAULT_PARAMS = {
     'action_l2': 1.0,  # quadratic penalty on actions (before rescaling by max_u)
     'clip_obs': 200.,
     'scope': 'ddpg',  # can be tweaked for testing
-    'relative_goals': False,   # 如果成立，则 goal = goal - achieved_goal
+    'relative_goals': False,   # If it is established, then goal = goal - achieved_goal
     # training
     'n_cycles': 50,  # per epoch
     'rollout_batch_size': 2,  # per mpi thread
@@ -125,7 +125,7 @@ def prepare_params(kwargs):
     tmp_env.reset()
     kwargs['max_u'] = np.array(kwargs['max_u']) if type(kwargs['max_u']) == list else kwargs['max_u']  # 1.0
     kwargs['gamma'] = 1. - 1. / kwargs['T']    # gamma=49/50
-    if 'lr' in kwargs:     # 学习率
+    if 'lr' in kwargs:     # Learning rate
         kwargs['pi_lr'] = kwargs['lr']
         kwargs['Q_lr'] = kwargs['lr'] 
         del kwargs['lr']
@@ -134,10 +134,10 @@ def prepare_params(kwargs):
                  'batch_size', 'Q_lr', 'pi_lr',
                  'norm_eps', 'norm_clip', 'max_u',
                  'action_l2', 'clip_obs', 'scope', 'relative_goals']:
-        ddpg_params[name] = kwargs[name]    # 复制一份用于DDPG
+        ddpg_params[name] = kwargs[name]    # Make a copy for DDPG
         kwargs['_' + name] = kwargs[name]  
-        del kwargs[name]                    # 将这些参数的键更名为 "_"+name
-    # 将DDPG的参数独立存储为一个键 "ddpg_params"
+        del kwargs[name]                    # Rename the keys for these parameters "_"+name
+    # Store the DDPG parameters as a single key "ddpg_params"
     kwargs['ddpg_params'] = ddpg_params
 
     return kwargs
@@ -153,7 +153,7 @@ def configure_her(params):
     env = cached_make_env(params['make_env'])
     env.reset()
     def reward_fun(ag_2, g, info):  # vectorized
-        # 当 ag_2 != g 时，奖励为-1; 当二者相等时奖励为 0
+        # When ag_2 != g, the reward is -1; when the two are equal, the reward is 0.
         return env.compute_reward(achieved_goal=ag_2, desired_goal=g, info=info)
 
     # Prepare configuration for HER.
@@ -164,11 +164,11 @@ def configure_her(params):
     # 配置 her_params["replay_strategy"]="future"  her_params["replay_k"]=4
     for name in ['replay_strategy', 'replay_k']:
         her_params[name] = params[name]
-        params['_' + name] = her_params[name]   # 参数传递给her_params后更名
+        params['_' + name] = her_params[name]   # Rename the parameter after passing it to her_params
         del params[name]
     
     # -------------------------------------------------
-    # BAI. 导入 gmmSample 模型 并配置 her 参数
+    # BAI. Import the gmmSample model and configure the her parameter
     # gmmInput = GMMInput()
     gmmSample, gmmmeanStd, gmmSample_config, gmmmeanStd_config, gmmTrain, gmmTrain_config, gmmEval, gmmEval_config = init_GMMModel()    
     
@@ -183,11 +183,11 @@ def configure_her(params):
 
     # -------------------------------------------------
 
-    # 传入参数，返回 her._sample_her_transitions 函数
-    # 传入的参数包括 replay_strategy='future', replay_k=4, reward_fun函数
+    # Pass in the argument and return the her._sample_her_transitions function
+    # The parameters passed in include replay_strategy='future', replay_k=4, reward_fun function
     sample_her_transitions = make_sample_her_transitions(**her_params)
 
-    return sample_her_transitions   # 返回值是一个函数
+    return sample_her_transitions   # The return value is a function
 
 
 def simple_goal_subtract(a, b):
@@ -198,7 +198,7 @@ def simple_goal_subtract(a, b):
 def configure_ddpg(dims, params, reuse=False, use_mpi=True, clip_return=True):
     """
     """
-    # 将参数传入 her， 返回 her._sample_her_transitions 函数
+    # Pass the argument to her, returning the her._sample_her_transitions function
     sample_her_transitions = configure_her(params)
     # Extract relevant parameters.
     gamma = params['gamma']                                # = 0.98
@@ -213,16 +213,16 @@ def configure_ddpg(dims, params, reuse=False, use_mpi=True, clip_return=True):
     ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
                         'clip_pos_returns': True,  # clip positive returns
-                        'clip_return': (1. / (1. - gamma)) if clip_return else np.inf,  # max abs of return 当前值为50
+                        'clip_return': (1. / (1. - gamma)) if clip_return else np.inf,  # max abs of return The current value is 50
                         'rollout_batch_size': rollout_batch_size,      # 2 
-                        'subtract_goals': simple_goal_subtract,        # 对 goal 的预处理函数
-                        'sample_transitions': sample_her_transitions,  # 为 her.py 中返回的函数
+                        'subtract_goals': simple_goal_subtract,        # Preprocessor function for goal
+                        'sample_transitions': sample_her_transitions,  # The function returned in her.py
                         'gamma': gamma,
                         })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
     }
-    # 返回 DDPG 实例化的对象
+    # Returns the object instantiated by DDPG
     policy = DDPG(reuse=reuse, **ddpg_params, use_mpi=use_mpi)
     return policy
 
@@ -238,12 +238,12 @@ def configure_dims(params):
         'g': obs['desired_goal'].shape[0],
     }
 
-    # 在 FetchReach-v1 中，dims={'o': 10, 'u': 4, 'g': 3}
+    # In FetchReach-v1, dims={'o': 10, 'u': 4, 'g': 3}
     # print(dims)
 
     for key, value in info.items():
         value = np.array(value)
-        if value.ndim == 0:     # 当 value 是标量时成立，此时将 value 扩展一个维度
+        if value.ndim == 0:     # When value is a scalar, it is true, and value is extended by one dimension.
             value = value.reshape(1)
         dims['info_{}'.format(key)] = value.shape[0]
     return dims

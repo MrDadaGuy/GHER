@@ -10,8 +10,8 @@ from GHER.util import reshape_for_broadcasting
 class Normalizer:
     def __init__(self, size, eps=1e-2, default_clip_range=np.inf, sess=None):
         """
-        保存最新的 mean 和 std 值，对样本进行 normalize 或者 denormalize
-        最新的 mean 和 std 值通过MPI与其他线程进行同步并保持更新
+        Save the latest mean and std values and normalize or denormalize the samples
+         The latest mean and std values are synchronized with other threads via MPI and kept up to date
 
         A normalizer that ensures that observations are approximately distributed according to
         a standard Normal distribution (i.e. have mean zero and variance one).
@@ -28,7 +28,7 @@ class Normalizer:
         self.default_clip_range = default_clip_range
         self.sess = sess if sess is not None else tf.get_default_session()
 
-        # 以下元素均为了计算 mean 和 std. 
+        # The following elements are all calculated for mean and std.. 
         # mean = EX = local_sum / local_count
         # std = E(X^2)-(EX)^2 = (local_sumsq / count_tf) - (local_sum / count_tf)^2
         self.local_sum = np.zeros(self.size, np.float32)     # 存储 x 的和
@@ -51,20 +51,21 @@ class Normalizer:
             initializer=tf.ones_initializer(), shape=(self.size,), name='std',
             trainable=False, dtype=tf.float32)
 
-        # count_pl, sum_pl ,sumsq_pl 是由多线程同步而来的值进行传入的
+        # count_pl, sum_pl ,sumsq_pl Is passed in by a multi-threaded synchronous value
         self.count_pl = tf.placeholder(name='count_pl', shape=(1,), dtype=tf.float32)
         self.sum_pl = tf.placeholder(name='sum_pl', shape=(self.size,), dtype=tf.float32)
         self.sumsq_pl = tf.placeholder(name='sumsq_pl', shape=(self.size,), dtype=tf.float32)
 
-        # update_op将多线程计算而来的值进行同步，更新保存的 count, sum, sumsq 等
+        # Update_op synchronizes the values computed by the multithread, updates the saved count, sum, sumsq, etc.
         self.update_op = tf.group(
             self.count_tf.assign_add(self.count_pl),
             self.sum_tf.assign_add(self.sum_pl),
             self.sumsq_tf.assign_add(self.sumsq_pl)
         )
 
-        # 计算均值和方差. 均值 = sum_tf / count_tf
-        # 方差 = E(X^2)-(EX)^2 = (sumsq / count_tf) - (sum_tf / count_tf)^2
+        # Calculate the mean and variance. Mean = sum_tf / count_tf
+        # variance = E(X^2)-(EX)^2 = (sumsq / count_tf) - (sum_tf / count_tf)^2
+
         self.recompute_op = tf.group(
             tf.assign(self.mean, self.sum_tf / self.count_tf),
             tf.assign(self.std, tf.sqrt(tf.maximum(
@@ -76,7 +77,7 @@ class Normalizer:
 
     def update(self, v):
         """
-            针对一个新样本，更新 sum, sumsq, count 的值
+            Update the values of sum, sumsq, count for a new sample
         """
         v = v.reshape(-1, self.size)
 
@@ -87,7 +88,7 @@ class Normalizer:
 
     def normalize(self, v, clip_range=None):
         """
-            针对样本 v ， 减去已经保存好的均值 除以 标准差，后 clip
+            For the sample v, subtract the saved mean from the standard deviation, after clip
         """
         if clip_range is None:
             clip_range = self.default_clip_range
@@ -97,7 +98,7 @@ class Normalizer:
 
     def denormalize(self, v):
         """
-            解回原值
+            Resolve the original value
         """
         mean = reshape_for_broadcasting(self.mean, v)
         std = reshape_for_broadcasting(self.std,  v)
@@ -132,14 +133,14 @@ class Normalizer:
         synced_sum, synced_sumsq, synced_count = self.synchronize(
             local_sum=local_sum, local_sumsq=local_sumsq, local_count=local_count)
 
-        # 从MPI多线程计算的值对 count, sum, sumsq 等进行更新
+        # Update count, sum, sumsq, etc. from MPI multithreaded values
         self.sess.run(self.update_op, feed_dict={
             self.count_pl: synced_count,
             self.sum_pl: synced_sum,
             self.sumsq_pl: synced_sumsq,
         })
 
-        # 调用 self.update_op 更新后会重新计算 mean 和 std 的值
+        # Recalculate the values of mean and std after calling the self.update_op update
         self.sess.run(self.recompute_op)
 
 
