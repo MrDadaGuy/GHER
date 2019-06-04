@@ -31,9 +31,9 @@ class Normalizer:
         # The following elements are all calculated for mean and std.. 
         # mean = EX = local_sum / local_count
         # std = E(X^2)-(EX)^2 = (local_sumsq / count_tf) - (local_sum / count_tf)^2
-        self.local_sum = np.zeros(self.size, np.float32)     # 存储 x 的和
-        self.local_sumsq = np.zeros(self.size, np.float32)   # 存储 x^2 的和, sum squared
-        self.local_count = np.zeros(1, np.float32)           # 存储数目
+        self.local_sum = np.zeros(self.size, np.float32)     # Store x and
+        self.local_sumsq = np.zeros(self.size, np.float32)   # Store the sum of x^2, sum squared
+        self.local_count = np.zeros(1, np.float32)           # Number of stores
 
         self.sum_tf = tf.get_variable(
             initializer=tf.zeros_initializer(), shape=self.local_sum.shape, name='sum',

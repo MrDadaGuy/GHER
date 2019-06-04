@@ -16,7 +16,7 @@ from GHER.gmm_model.gmm_train import GMMInput
 
 def init_GMMModel():
     """
-        导入已训练好的GMM模型
+        Import a trained GMM model
     """
     # config
     gmmTrain_config = rnn_train_Config()
