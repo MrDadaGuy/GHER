@@ -88,33 +88,33 @@ class RobotEnv(gym.GoalEnv):
         obs = self._get_obs()
         return obs
 
-    def close(self):
-        if self.viewer is not None:
-            # self.viewer.finish()
-            self.viewer = None
-            self._viewers = {}
+    # def close(self):
+    #     if self.viewer is not None:
+    #         # self.viewer.finish()
+    #         self.viewer = None
+    #         self._viewers = {}
 
-    def render(self, mode='human', width=DEFAULT_SIZE, height=DEFAULT_SIZE):
-        self._render_callback()
-        if mode == 'rgb_array':
-            self._get_viewer(mode).render(width, height)
-            # window size used for old mujoco-py:
-            data = self._get_viewer(mode).read_pixels(width, height, depth=False)
-            # original image is upside-down, so flip it
-            return data[::-1, :, :]
-        elif mode == 'human':
-            self._get_viewer(mode).render()
+    # def render(self, mode='human', width=DEFAULT_SIZE, height=DEFAULT_SIZE):
+    #     self._render_callback()
+    #     if mode == 'rgb_array':
+    #         self._get_viewer(mode).render(width, height)
+    #         # window size used for old mujoco-py:
+    #         data = self._get_viewer(mode).read_pixels(width, height, depth=False)
+    #         # original image is upside-down, so flip it
+    #         return data[::-1, :, :]
+    #     elif mode == 'human':
+    #         self._get_viewer(mode).render()
 
-    def _get_viewer(self, mode):
-        self.viewer = self._viewers.get(mode)
-        if self.viewer is None:
-            if mode == 'human':
-                self.viewer = mujoco_py.MjViewer(self.sim)
-            elif mode == 'rgb_array':
-                self.viewer = mujoco_py.MjRenderContextOffscreen(self.sim, device_id=-1)
-            self._viewer_setup()
-            self._viewers[mode] = self.viewer
-        return self.viewer
+    # def _get_viewer(self, mode):
+    #     self.viewer = self._viewers.get(mode)
+    #     if self.viewer is None:
+    #         if mode == 'human':
+    #             self.viewer = mujoco_py.MjViewer(self.sim)
+    #         elif mode == 'rgb_array':
+    #             self.viewer = mujoco_py.MjRenderContextOffscreen(self.sim, device_id=-1)
+    #         self._viewer_setup()
+    #         self._viewers[mode] = self.viewer
+    #     return self.viewer
 
     # Extension methods
     # ----------------------------
