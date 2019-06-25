@@ -38,11 +38,15 @@ class Sim:        #gym.core.Env
 
 
     def step(self, new_ee_pos, gripper_pct_open):
-        assert new_ee_pos is type(tuple), "New EE position needs to be a tuple"
+#        assert new_ee_pos is type(list), "New EE position needs to be a list"
         assert len(new_ee_pos) == 3, "New EE position needs to have 3 elements: X, Y, Z"
         # move the arm, and then calculate reward
-        self._move_arm(self, *new_ee_pos)
-        self._move_gripper(self, gripper_pct_open)
+#        self._move_arm(self, new_ee_pos)
+
+        print("gripper pct open = {}".format(gripper_pct_open))
+        self._move_gripper(gripper_pct_open)
+
+
 
 
         obs = None
@@ -247,6 +251,8 @@ def is_inside_circle(x, y, rad, circle_x = 0, circle_y = 0):
     if ((x - circle_x) * (x - circle_x) + (y - circle_y) * (y - circle_y) <= rad * rad):
         return True
     return False
+
+
 
 
 
