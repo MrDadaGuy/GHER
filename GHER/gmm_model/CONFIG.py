@@ -6,7 +6,9 @@ class rnn_train_Config(object):
     def __init__(self):
 
         # choose the different envname to train the Conditional RNN model
-        self.envname = "FetchPush"
+        self.envname = "RosUnitySim"
+
+        #self.envname = "FetchPush"
         # self.envname = "FetchReach"
         # self.envname = "FetchPickAndPlace"
         # self.envname = "FetchSlide"

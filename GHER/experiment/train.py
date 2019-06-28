@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import os
 import sys
+sys.path.insert(0, '/home/modsim/GHER/')
+
 
 import click
 import numpy as np
@@ -193,7 +196,7 @@ def launch(env_name, logdir, n_epochs, num_cpu, seed, replay_strategy, policy_sa
 
 
 @click.command()
-@click.option('--env_name', type=str, default='FetchPush-v1', help='the name of the OpenAI Gym environment that you want to train on')
+@click.option('--env_name', type=str, default='Ros-Unity-Sim-v1', help='the name of the OpenAI Gym environment that you want to train on')
 @click.option('--logdir', type=str, default="result/GHer-result/FetchPush/result/", help='the path to where logs and policy pickles should go. If not specified, creates a folder in /tmp/')
 @click.option('--n_epochs', type=int, default=500, help='the number of training epochs to run')
 @click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)')

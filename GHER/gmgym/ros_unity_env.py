@@ -1,8 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
+import sys
+sys.path.insert(0, '/home/modsim/GHER/')
+import GHER.gmgym
+import GHER.gmgym.robot_env
 
 import numpy as np
-from gym.envs.robotics import rotations, utils
-import gmgym
+#from gym.envs.robotics import rotations, utils
 
 
 def goal_distance(goal_a, goal_b):
@@ -10,14 +14,14 @@ def goal_distance(goal_a, goal_b):
     return np.linalg.norm(goal_a - goal_b, axis=-1)
 
 
-class RosUnityEnv(gmgym.robot_env.RobotEnv):
-    """OpenAI Gym Compatible environment for ROS / Unity robotics simulation, using ROS# (ros sharp)
+class RosUnityEnv(GHER.gmgym.robot_env.RobotEnv):
+    """OpenAI Gym (mostly) Compatible environment for ROS / Unity robotics simulation, using ROS# (ros sharp)
     """
 
     def __init__(
-        self, model_path, n_substeps, gripper_extra_height, block_gripper,
-        has_object, target_in_the_air, target_offset, obj_range, target_range,
-        distance_threshold, initial_qpos, reward_type,
+        self, model_path="", n_substeps=50, gripper_extra_height=0, block_gripper=False,
+        has_object=True, target_in_the_air=False, target_offset=0, obj_range=1, target_range=1,
+        distance_threshold=0.1, initial_qpos={"Joint_Gripper" : 0.0}, reward_type='sparse',
     ):
         """Initializes a new Ros Unity environment.
         Args:

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import copy
@@ -7,7 +7,10 @@ import numpy as np
 import gym
 from gym import error, spaces
 from gym.utils import seeding
-import gmgym
+import sys
+sys.path.insert(0, '/home/modsim/GHER/')
+import GHER.gmgym
+import GHER.gmgym.ros_unity_sim
 
 #try:
 #    import mujoco_py
@@ -18,16 +21,16 @@ DEFAULT_SIZE = 500
 
 class RobotEnv(gym.GoalEnv):
     def __init__(self, model_path, initial_qpos, n_actions, n_substeps):
-        if model_path.startswith('/'):
-            fullpath = model_path
-        else:
-            fullpath = os.path.join(os.path.dirname(__file__), 'assets', model_path)
-        if not os.path.exists(fullpath):
-            raise IOError('File {} does not exist'.format(fullpath))
+#        if model_path.startswith('/'):
+#            fullpath = model_path
+#        else:
+#            fullpath = os.path.join(os.path.dirname(__file__), 'assets', model_path)
+#        if not os.path.exists(fullpath):
+#            raise IOError('File {} does not exist'.format(fullpath))
 
 #        model = mujoco_py.load_model_from_path(fullpath)
 #        self.sim = mujoco_py.MjSim(model, nsubsteps=n_substeps)
-        self.sim = gmgym.ros_unity_sim.Sim()
+        self.sim = GHER.gmgym.ros_unity_sim.Sim()
 #        self.viewer = None
 #        self._viewers = {}
 
@@ -80,7 +83,7 @@ class RobotEnv(gym.GoalEnv):
         # Gimbel lock) or we may not achieve an initial condition (e.g. an object is within the hand).
         # In this case, we just keep randomizing until we eventually achieve a valid initial
         # configuration.
-        super(RobotEnv, self).reset()
+#        super(RobotEnv, self).reset()
         did_reset_sim = False
         while not did_reset_sim:
             did_reset_sim = self._reset_sim()

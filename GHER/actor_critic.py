@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import tensorflow as tf
 from GHER.util import store_args, nn
 

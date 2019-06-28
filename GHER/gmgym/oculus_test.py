@@ -7,10 +7,13 @@ import geometry_msgs.msg
 
 
 def callback(data):
-    rospy.loginfo("I heard %s",data)
+#    rospy.loginfo("I heard %s",data)
     grip_open = data.pose.orientation.x    # need to convert to Euler befoer anything usefl
+    x = data.pose.position.x
+    y = data.pose.position.y
+    z = data.pose.position.z
     grip_open = (grip_open + 1 ) / 2
-    sim.step([0,0,0], grip_open)
+    sim.step(x, y, z, grip_open)
     
 def listener():
 #    rospy.init_node('oculus_robot_control')

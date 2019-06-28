@@ -1,3 +1,9 @@
+import sys
+sys.path.insert(0, '/home/modsim/GHER/')
+
+import GHER.gmgym
+import GHER.gmgym.ros_unity_env
+
 from copy import deepcopy
 import numpy as np
 import json
@@ -13,6 +19,7 @@ from GHER.gmm_model.CONFIG import rnn_train_Config, rnn_eval_Config, rnn_sample_
 from GHER.gmm_model.gmm_model import GMMModel
 from GHER.gmm_model.gmm_train import GMMInput
 
+from GHER.gmgym import ros_unity_env
 
 def init_GMMModel():
     """
@@ -58,7 +65,7 @@ def init_GMMModel():
 
 
 DEFAULT_ENV_PARAMS = {
-    'FetchReach-v1': {
+    'Ros-Unity-Sim': {      #FetchReach-v1
         'n_cycles': 10,
     },
 }
@@ -106,7 +113,8 @@ def cached_make_env(make_env):
     its observation and action spaces, without any intend of actually using it.
     """
     if make_env not in CACHED_ENVS:
-        env = make_env()
+#        env = make_env()
+        env = GHER.gmgym.ros_unity_env.RosUnityEnv()
         CACHED_ENVS[make_env] = env
     return CACHED_ENVS[make_env]
 

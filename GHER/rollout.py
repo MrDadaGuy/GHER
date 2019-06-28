@@ -2,7 +2,7 @@ from collections import deque
 
 import numpy as np
 import pickle
-from mujoco_py import MujocoException
+#from mujoco_py import MujocoException
 from GHER.util import convert_episode_to_batch_major, store_args
 import GHER.experiment.config as config
 import gym, time
