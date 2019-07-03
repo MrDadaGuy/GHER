@@ -76,8 +76,8 @@ class Sim:        #gym.core.Env
 
 
     def _move_arm(self, x, y, z=0.2):
-        assert self.is_inside_circle(x, y, ARM_FAR_REACH), "Target is outside of RBX1 arm reach of {} m".format(ARM_FAR_REACH)
-        assert not self.is_inside_circle(x, y, ARM_CLOSE_REACH), "Target is too close to RBX1 base, needs to be greater than {} m".format(ARM_CLOSE_REACH)
+        assert self._is_inside_circle(x, y, ARM_FAR_REACH), "Target is outside of RBX1 arm reach of {} m".format(ARM_FAR_REACH)
+        assert not self._is_inside_circle(x, y, ARM_CLOSE_REACH), "Target is too close to RBX1 base, needs to be greater than {} m".format(ARM_CLOSE_REACH)
 
         group_arm.set_start_state_to_current_state()
 
@@ -170,7 +170,7 @@ class Sim:        #gym.core.Env
     def close(self):
         pass
 
-    def is_inside_circle(self, x, y, rad, circle_x = 0, circle_y = 0):
+    def _is_inside_circle(self, x, y, rad, circle_x = 0, circle_y = 0):
         if ((x - circle_x) * (x - circle_x) + (y - circle_y) * (y - circle_y) <= rad * rad):
             return True
         return False

@@ -10,7 +10,7 @@ from gym.utils import seeding
 import sys
 sys.path.insert(0, '/home/modsim/GHER/')
 import GHER.gmgym
-import GHER.gmgym.ros_unity_sim
+import GHER.gmgym.sim_proxy
 
 #try:
 #    import mujoco_py
@@ -30,7 +30,7 @@ class RobotEnv(gym.GoalEnv):
 
 #        model = mujoco_py.load_model_from_path(fullpath)
 #        self.sim = mujoco_py.MjSim(model, nsubsteps=n_substeps)
-        self.sim = GHER.gmgym.ros_unity_sim.Sim()
+        self.sim = GHER.gmgym.sim_proxy.Sim()
 #        self.viewer = None
 #        self._viewers = {}
 
