@@ -6,12 +6,16 @@ import copy
 import rospy
 import moveit_commander
 import moveit_msgs.msg
+from moveit_msgs.msg import RobotState
+from sensor_msgs.msg import JointState
+
 import actionlib_msgs.msg
 import geometry_msgs.msg
 import trajectory_msgs.msg
 from std_msgs.msg import Header, String
 from sensor_msgs.msg import Image, CompressedImage
 import gym
+
 
 sys.path.append("../rbx1_driver")
 #import generate_samples
@@ -147,25 +151,52 @@ class Sim:        #gym.core.Env
         pass
 
     def reset(self):
+        print("Resetting Unity Simulation")
         # Reset robot to original pose and regenerate new world, new random position of world objects in unity
-        joint_goal = group_arm.get_current_joint_values()
-        joint_goal[0] = 0.0
-        joint_goal[1] = 0.0 # math.pi/3
-        joint_goal[2] = 0.0 # math.pi/3
-        joint_goal[3] = 0.0
-        joint_goal[4] = 0.0 # math.pi/3
-        joint_goal[5] = 0.0
+        joint_state = JointState()
+        joint_state.header = Header()
+        joint_state.header.stamp = rospy.Time.now()
+        joint_state.name = self.grip_joints
+        joint_state.position = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+#        moveit_robot_state = RobotState()
+#        moveit_robot_state.joint_state = joint_state
+#        group_arm.set_start_state(moveit_robot_state)
+        group_arm.go(joint_state)
 
-        rearry_great_pran = group_arm.go(joint_goal, wait=True)
-        group_arm.execute(rearry_great_pran, wait=True)
+#        joint_goal = group_arm.get_current_joint_values()
+#        joint_goal[0] = 0.0
+#        joint_goal[1] = 0.0 # math.pi/3
+#        joint_goal[2] = 0.0 # math.pi/3
+#        joint_goal[3] = 0.0
+#        joint_goal[4] = 0.0 # math.pi/3
+#        joint_goal[5] = 0.0
+
+#        rearry_great_pran = group_arm.go(joint_goal, wait=True)
+#        group_arm.execute(rearry_great_pran, wait=True)
         group_arm.stop()
 
-        obs = None
+        obs = self._get_obs() #self.ball_pose
         reward = 0
         done = False
         info = {}
 
         return obs, reward, done, info
+
+    def _get_obs(self):
+        # ball pose
+        ball_pose = rospy.wait_for_message('/unity/ball_pose', geometry_msgs.msg.PoseStamped)
+        ball_pose = ball_pose.pose.position
+        # box pose
+        box_pose = rospy.wait_for_message('/unity/box_pose', geometry_msgs.msg.PoseStamped)
+        box_pose = box_pose.pose.position
+        # end effector pose, and state opened/closed
+        ee_pose = group_arm.get_current_pose().pose
+#        ee_grip = group_gripper.get_current_pose().pose
+
+        ee_grip = rospy.wait_for_message('/joint_states', JointState)
+        ee_grip = ee_grip.position[7]  # get value of Joint_Grip_Servo link
+
+        return [ee_pose, ee_grip, ball_pose, box_pose]
 
     def close(self):
         pass

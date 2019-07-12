@@ -4,6 +4,7 @@ import sys
 sys.path.insert(0, '/home/modsim/GHER/')
 import GHER.gmgym
 import GHER.gmgym.robot_env
+import geometry_msgs.msg
 
 import numpy as np
 #from gym.envs.robotics import rotations, utils
@@ -42,7 +43,9 @@ class RosUnityEnv(GHER.gmgym.robot_env.RobotEnv):
         self.block_gripper = block_gripper
         self.has_object = has_object
         self.target_in_the_air = target_in_the_air
-        self.target_offset = target_offset
+#        self.target_offset = target_offset
+        self.target_offset = np.array([0, 0, 0])
+        self.height_offset = 0
         self.obj_range = obj_range
         self.target_range = target_range
         self.distance_threshold = distance_threshold
@@ -91,32 +94,35 @@ class RosUnityEnv(GHER.gmgym.robot_env.RobotEnv):
 
     def _get_obs(self):
         # positions
-        grip_pos = self.sim.data.get_site_xpos('robot0:grip')
-        dt = self.sim.nsubsteps * self.sim.model.opt.timestep
-        grip_velp = self.sim.data.get_site_xvelp('robot0:grip') * dt
-        robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
+        grip_pos = self.sim.gripper_pose
+#        dt = self.sim.nsubsteps * self.sim.model.opt.timestep
+#        grip_velp = self.sim.data.get_site_xvelp('robot0:grip') * dt
+#        robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
         if self.has_object:
-            object_pos = self.sim.data.get_site_xpos('object0')
+            object_pos = self.sim.target_position
+#            object_pos = self.sim.data.get_site_xpos('object0')
             # rotations
-            object_rot = rotations.mat2euler(self.sim.data.get_site_xmat('object0'))
+#            object_rot = rotations.mat2euler(self.sim.data.get_site_xmat('object0'))
             # velocities
-            object_velp = self.sim.data.get_site_xvelp('object0') * dt
-            object_velr = self.sim.data.get_site_xvelr('object0') * dt
+#            object_velp = self.sim.data.get_site_xvelp('object0') * dt
+#            object_velr = self.sim.data.get_site_xvelr('object0') * dt
             # gripper state
             object_rel_pos = object_pos - grip_pos
-            object_velp -= grip_velp
+#            object_velp -= grip_velp
         else:
-            object_pos = object_rot = object_velp = object_velr = object_rel_pos = np.zeros(0)
-        gripper_state = robot_qpos[-2:]
-        gripper_vel = robot_qvel[-2:] * dt  # change to a scalar if the gripper is made symmetric
+            object_pos = self.sim.ball_pose
+#            object_pos = object_rot = object_velp = object_velr = object_rel_pos = np.zeros(0)
+#        gripper_state = robot_qpos[-2:]
+        gripper_state = self.sim.gripper_open
+#        gripper_vel = robot_qvel[-2:] * dt  # change to a scalar if the gripper is made symmetric
 
         if not self.has_object:
             achieved_goal = grip_pos.copy()
         else:
             achieved_goal = np.squeeze(object_pos.copy())
         obs = np.concatenate([
-            grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
-            object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
+            grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, #object_rot.ravel(),
+#            object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
         ])
 
         return {
@@ -159,13 +165,15 @@ class RosUnityEnv(GHER.gmgym.robot_env.RobotEnv):
 
     def _sample_goal(self):
         if self.has_object:
-            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range, self.target_range, size=3)
+#            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range, self.target_range, size=3)
+            goal = np.array([self.sim.target_position.x, self.sim.target_position.y, self.sim.target_position.z])
             goal += self.target_offset
             goal[2] = self.height_offset
             if self.target_in_the_air and self.np_random.uniform() < 0.5:
                 goal[2] += self.np_random.uniform(0, 0.45)
         else:
-            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
+            goal = np.array([self.sim.target_position.x, self.sim.target_position.y, self.sim.target_position.z])
+#            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
         return goal.copy()
 
     def _is_success(self, achieved_goal, desired_goal):
@@ -173,20 +181,22 @@ class RosUnityEnv(GHER.gmgym.robot_env.RobotEnv):
         return (d < self.distance_threshold).astype(np.float32)
 
     def _env_setup(self, initial_qpos):
-        for name, value in initial_qpos.items():
-            self.sim.data.set_joint_qpos(name, value)
-        utils.reset_mocap_welds(self.sim)
-        self.sim.forward()
+#        for name, value in initial_qpos.items():
+#            self.sim.data.set_joint_qpos(name, value)
+#        utils.reset_mocap_welds(self.sim)
+#        self.sim.forward()
 
         # Move end effector into position.
-        gripper_target = np.array([-0.498, 0.005, -0.431 + self.gripper_extra_height]) + self.sim.data.get_site_xpos('robot0:grip')
-        gripper_rotation = np.array([1., 0., 1., 0.])
-        self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
-        self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
-        for _ in range(10):
-            self.sim.step()
+#        gripper_target = np.array([-0.498, 0.005, -0.431 + self.gripper_extra_height]) + self.sim.data.get_site_xpos('robot0:grip')
+#        gripper_rotation = np.array([1., 0., 1., 0.])
+#        self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
+#        self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
+#        for _ in range(10):
+#            self.sim.step()
 
         # Extract information for sampling goals.
-        self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
-        if self.has_object:
-            self.height_offset = self.sim.data.get_site_xpos('object0')[2]
+#        self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
+#        if self.has_object:
+#            self.height_offset = self.sim.data.get_site_xpos('object0')[2]
+
+        self.sim.reset()

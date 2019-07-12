@@ -33,10 +33,11 @@ class RobotEnv(gym.GoalEnv):
         self.sim = GHER.gmgym.sim_proxy.Sim()
 #        self.viewer = None
 #        self._viewers = {}
+        self.sim.nsubsteps = n_substeps
 
         self.metadata = {
-            'render.modes': ['human', 'rgb_array'],
-            'video.frames_per_second': int(np.round(1.0 / self.dt))
+#            'render.modes': ['human', 'rgb_array'],
+#            'video.frames_per_second': int(np.round(1.0 / self.dt))
         }
 
         self.seed()
