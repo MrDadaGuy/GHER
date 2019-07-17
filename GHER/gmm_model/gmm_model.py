@@ -175,7 +175,7 @@ class GMMModel(object):
             pass
         else:
             print("Need Load Model from Parent dir.")
-            ckpt_file = os.path.join("../gmm_model", ckpt_file)
+            ckpt_file = os.path.join("gmm_model", ckpt_file)
         print(os.path.abspath(ckpt_file))
         assert os.path.exists(ckpt_file+".index")
         self.saver.restore(self.sess, ckpt_file)

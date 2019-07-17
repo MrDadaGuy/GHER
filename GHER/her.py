@@ -53,6 +53,7 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun,
 
     def _sample_her_transitions_gmm(episode_batch, batch_size_in_transitions):
         global CALL_NUM
+        print(batch_size_in_transitions)
         if batch_size_in_transitions == 256:
             CALL_NUM += 1  
             epoch = int(CALL_NUM / 2000)

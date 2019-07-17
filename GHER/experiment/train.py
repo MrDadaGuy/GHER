@@ -5,7 +5,6 @@ import os
 import sys
 sys.path.insert(0, '/home/modsim/GHER/')
 
-
 import click
 import numpy as np
 import json

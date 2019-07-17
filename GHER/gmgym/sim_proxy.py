@@ -22,15 +22,17 @@ class Sim:
         self.nsubsteps = 0
     
     def send(self, request_message):
-
         print("SimProxy send...")
-
         self.socket.send(pickle.dumps(request_message, protocol=2))
         #  Get the reply.
         response_message = self.socket.recv()
-        print("Received reply [", response_message, "]")
+#        print("Received reply [", response_message, "]")
         response = pickle.loads(response_message)
         return response
+
+    def step(self, **args):
+        print("step {}".format( args))
+#        print(args)
 
 
     def reset(self):
@@ -43,4 +45,5 @@ class Sim:
     def get_state(self):
         pass
     
-
+    def set_state(self, state):
+        pass

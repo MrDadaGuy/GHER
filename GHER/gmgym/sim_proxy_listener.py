@@ -39,6 +39,8 @@ class SimProxyListener:
                 self.socket.send(pickle.dumps(obs))
 #                self.socket.send_string("Reset OK")     # REQ:REP needs a response!! client is waiting
 
+# TODO:  Randomize position of object -- already have this in generate_samples
+
             time.sleep(0.001)
 
 

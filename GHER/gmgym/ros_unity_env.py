@@ -89,37 +89,23 @@ class RosUnityEnv(GHER.gmgym.robot_env.RobotEnv):
         action = np.concatenate([pos_ctrl, rot_ctrl, gripper_ctrl])
 
         # Apply action to simulation.
-        utils.ctrl_set_action(self.sim, action)
-        utils.mocap_set_action(self.sim, action)
+#        utils.ctrl_set_action(self.sim, action)
+#        utils.mocap_set_action(self.sim, action)
 
     def _get_obs(self):
-        # positions
-        grip_pos = self.sim.gripper_pose
-#        dt = self.sim.nsubsteps * self.sim.model.opt.timestep
-#        grip_velp = self.sim.data.get_site_xvelp('robot0:grip') * dt
-#        robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
+        grip_pos = np.array([self.sim.gripper_pose.position.x, self.sim.gripper_pose.position.y, self.sim.gripper_pose.position.z])
         if self.has_object:
-            object_pos = self.sim.target_position
-#            object_pos = self.sim.data.get_site_xpos('object0')
-            # rotations
-#            object_rot = rotations.mat2euler(self.sim.data.get_site_xmat('object0'))
-            # velocities
-#            object_velp = self.sim.data.get_site_xvelp('object0') * dt
-#            object_velr = self.sim.data.get_site_xvelr('object0') * dt
-            # gripper state
+            object_pos = np.array([self.sim.target_position.x, self.sim.target_position.y, self.sim.target_position.z])
             object_rel_pos = object_pos - grip_pos
-#            object_velp -= grip_velp
         else:
-            object_pos = self.sim.ball_pose
-#            object_pos = object_rot = object_velp = object_velr = object_rel_pos = np.zeros(0)
-#        gripper_state = robot_qpos[-2:]
-        gripper_state = self.sim.gripper_open
-#        gripper_vel = robot_qvel[-2:] * dt  # change to a scalar if the gripper is made symmetric
+            object_pos = np.array([self.sim.target_position.x, self.sim.target_position.y, self.sim.target_position.z])
+        gripper_state = np.array([self.sim.gripper_open])
 
         if not self.has_object:
             achieved_goal = grip_pos.copy()
         else:
             achieved_goal = np.squeeze(object_pos.copy())
+
         obs = np.concatenate([
             grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, #object_rot.ravel(),
 #            object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
@@ -148,19 +134,18 @@ class RosUnityEnv(GHER.gmgym.robot_env.RobotEnv):
         self.sim.forward()
 
     def _reset_sim(self):
-        self.sim.set_state(self.initial_state)
+#        self.sim.set_state(self.initial_state)
 
         # Randomize start position of object.
-        if self.has_object:
-            object_xpos = self.initial_gripper_xpos[:2]
-            while np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2]) < 0.1:
-                object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range, size=2)
-            object_qpos = self.sim.data.get_joint_qpos('object0:joint')
-            assert object_qpos.shape == (7,)
-            object_qpos[:2] = object_xpos
-            self.sim.data.set_joint_qpos('object0:joint', object_qpos)
-
-        self.sim.forward()
+#        if self.has_object:
+#            object_xpos = self.initial_gripper_xpos[:2]
+#            while np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2]) < 0.1:
+#                object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range, size=2)
+#            object_qpos = self.sim.data.get_joint_qpos('object0:joint')
+#            assert object_qpos.shape == (7,)
+#            object_qpos[:2] = object_xpos
+#            self.sim.data.set_joint_qpos('object0:joint', object_qpos)
+#        self.sim.forward()
         return True
 
     def _sample_goal(self):
@@ -200,3 +185,4 @@ class RosUnityEnv(GHER.gmgym.robot_env.RobotEnv):
 #            self.height_offset = self.sim.data.get_site_xpos('object0')[2]
 
         self.sim.reset()
+
