@@ -35,7 +35,8 @@ class RobotEnv(gym.GoalEnv):
 #        self._viewers = {}
         self.sim.nsubsteps = n_substeps
 
-        self._max_episode_steps = 4000
+        self._max_episode_steps = 50
+#        self._max_episode_steps = 128
         self.metadata = {
 #            'render.modes': ['human', 'rgb_array'],
 #            'video.frames_per_second': int(np.round(1.0 / self.dt))
@@ -67,8 +68,9 @@ class RobotEnv(gym.GoalEnv):
 
     def step(self, action):
         action = np.clip(action, self.action_space.low, self.action_space.high)
-        self._set_action(action)
-        self.sim.step()
+        action = (action + 1) / 2     # shift from -1:1 to 0:1
+#        self._set_action(action)
+        self.sim.step(action)
         self._step_callback()
         obs = self._get_obs()
 

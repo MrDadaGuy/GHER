@@ -148,6 +148,7 @@ def transitions_in_episode_batch(episode_batch):
     """Number of transitions in a given episode batch.
     """
     shape = episode_batch['u'].shape
+    print("SHAPE = {} {}".format(shape[0], shape[1]))
     return shape[0] * shape[1]
 
 

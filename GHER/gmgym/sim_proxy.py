@@ -21,7 +21,7 @@ class Sim:
         self.socket.connect ("tcp://localhost:%s" % port)
         self.nsubsteps = 0
     
-    def send(self, request_message):
+    def _send(self, request_message):
         print("SimProxy send...")
         self.socket.send(pickle.dumps(request_message, protocol=2))
         #  Get the reply.
@@ -30,14 +30,16 @@ class Sim:
         response = pickle.loads(response_message)
         return response
 
-    def step(self, **args):
-        print("step {}".format( args))
+    def step(self, args):
+#        print("Hi Tim, step {}".format( args))
 #        print(args)
+        response = self._send(args)
+        return response
 
 
     def reset(self):
         print("SimProxy reset...")
-        response = self.send("reset")
+        response = self._send("reset")
         self.gripper_pose, self.gripper_open, self.target_position, self.box_pose = response
         return response
 
